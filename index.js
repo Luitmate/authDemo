@@ -4,6 +4,7 @@ const User = require('./models/user');
 const path = require('path');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
+const session = require('express-session');
 
 //------SET MONGOOSE------//
 main().catch(err => console.log(err));
@@ -18,6 +19,11 @@ app.set('views', path.join(__dirname, 'views')),
 
 //------PARSER------//
 app.use(express.urlencoded({ extended: true }))
+
+//------SESSION------//
+app.use(session({
+    secret: 'secreto'
+}))
 
 
 app.get('/', (req, res) => {
@@ -36,6 +42,7 @@ app.post('/registro', async (req, res) => {
         password: hash
     })
     await user.save();
+    req.session.user_id = user._id;
     res.redirect('/');
 })
 
@@ -48,16 +55,18 @@ app.post('/login', async (req, res) => {
     const user = await User.findOne({ username });
     const validPassword = await bcrypt.compare(password, user.password);
     if(validPassword){
-        res.send('welcome');
+        req.session.user_id = user._id;
+        res.redirect('/secret');
     }else {
-        res.send('try again');
+        res.redirect('/login');
     }
-
-
 })
 
 
 app.get('/secret', (req, res) => {
+    if(!req.session.user_id) {
+        res.redirect('/login');
+    }
     res.send('Esta es una página secreta solo para usuarios logueados');
 })
 
